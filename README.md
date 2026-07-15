@@ -6,7 +6,9 @@ signals that precede common athletic injuries. It uses **YOLOv8-Pose** to detect
 and fires rule-based injury events (ACL, ankle sprain, hamstring, spine stress,
 elbow hyperextension, falls, and limb asymmetry) with HIGH / MEDIUM / LOW risk
 scoring.
+
 ![Uploading Screenshot 2026-07-15 153101.png…]()
+
 
 ---
 
