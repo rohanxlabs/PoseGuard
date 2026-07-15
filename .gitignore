@@ -1,0 +1,70 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc.lock
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environment
+venv/
+.env/
+.venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Media and output files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp3
+*.wav
+outputs/
+runs/
+logs/
+
+# Model files and checkpoints
+*.pth
+*.pt
+*.h5
+*.pkl
+*.joblib
+*.model
+checkpoints/
+weights/
+saved_models/
+
+# Config and data files that shouldn't be tracked
+*.csv
+*.json
+*.parquet
+*.gz
+*.zip
+*.tar
+*.rar
+data/
+annotations/
+temp/
+tmp/
+
+# Miscellaneous
+*.log
+*.sqlite
+*.db
+*.lock
+.ipynb_checkpoints/
