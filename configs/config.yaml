@@ -1,0 +1,42 @@
+model:
+  weights: "yolov8m-pose.pt"     # yolov8n/s/m/l/x-pose.pt
+  confidence: 0.5
+  iou_threshold: 0.45
+  device: "cpu"                   # or "cuda"
+
+pose:
+  keypoint_confidence_threshold: 0.4
+  smoothing_window: 5             # frames for moving average
+
+tracking:
+  max_age: 30                     # frames before track is dropped
+  min_hits: 3
+  iou_threshold: 0.3
+
+injury:
+  # Joint angle thresholds (degrees)
+  knee_hyperextension_angle: 170
+  ankle_inversion_angle: 35
+  hip_abduction_angle: 50
+  elbow_hyperextension_angle: 175
+  spine_lateral_flexion_angle: 40
+
+  # Velocity thresholds (pixels/frame)
+  velocity_spike_threshold: 80
+  acceleration_threshold: 120
+
+  # Temporal
+  fall_detection_frames: 6
+  asymmetry_threshold: 0.25       # limb asymmetry ratio
+
+  # Classification
+  high_risk_score: 0.75
+  medium_risk_score: 0.45
+
+output:
+  save_video: true
+  save_logs: true
+  log_interval: 30               # frames
+  overlay_skeleton: true
+  overlay_heatmap: false
+  output_fps: 30
