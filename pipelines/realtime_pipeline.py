@@ -35,49 +35,66 @@ class RealtimePipeline:
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         logger.info(f"Starting realtime pipeline on source: {self.source}")
 
-        frame_idx = 0
-        fps = 30.0
-        t_prev = time.time()
+        frame_idx    = 0
+        fps          = 30.0
+        t_prev       = time.time()
         total_events = 0
-        saved_count = 0
+        saved_count  = 0
 
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
+            # --- Detect & Track ---
             persons = self.detector.detect(frame)
-            persons = self.tracker.update(persons)
+            persons, expired_ids = self.tracker.update(persons)
+
+            # Reset temporal state for tracks that just expired
+            for expired_id in expired_ids:
+                self.temporal.reset_track(expired_id)
 
             for person in persons:
                 tid = person.get("track_id", -1)
                 kps = person["keypoints"]
+
                 self.temporal.update(tid, kps)
-                smoothed = self.temporal.get_smoothed_keypoints(tid) or kps
+                smoothed   = self.temporal.get_smoothed_keypoints(tid) or kps
                 velocities = self.temporal.get_velocities(tid)
+
                 angles    = self.analyzer.compute_angles(smoothed)
                 asymmetry = self.analyzer.limb_asymmetry(smoothed)
-                events    = self.classifier.classify(angles, asymmetry, smoothed, velocities, tid, frame_idx)
+                raw_events = self.classifier.classify(
+                    angles, asymmetry, smoothed, velocities, tid, frame_idx
+                )
 
-                risk = max((e.risk_score for e in events), default=0)
+                # Debounce — same logic as video pipeline
+                events = [
+                    e for e in raw_events
+                    if self.temporal.should_emit_event(tid, e.injury_type, frame_idx)
+                ]
+                total_events += len(events)
+
+                risk  = max((e.risk_score for e in raw_events), default=0)
                 _, color = self.classifier.get_risk_level(risk)
 
                 frame = self.visualizer.draw_skeleton(frame, person, color)
                 frame = self.visualizer.draw_bbox(frame, person, color, tid)
-                frame = self.visualizer.draw_injury_alerts(frame, events, person)
+                frame = self.visualizer.draw_injury_alerts(frame, raw_events, person)
                 frame = self.visualizer.draw_angles(frame, person, angles)
-                total_events += len([e for e in events if self.temporal.should_emit_event(tid, e.injury_type, frame_idx)])
 
-            now = time.time()
-            fps = 0.9 * fps + 0.1 / max(now - t_prev, 1e-6)
+            now   = time.time()
+            fps   = 0.9 * fps + 0.1 / max(now - t_prev, 1e-6)
             t_prev = now
             frame = self.visualizer.draw_hud(frame, frame_idx, total_events, fps)
 
-            cv2.imshow("Injury Detection", frame)
+            cv2.imshow("PoseGuard — Risk Detection", frame)
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 break
             elif key == ord('s'):
+                import os
+                os.makedirs("outputs", exist_ok=True)
                 cv2.imwrite(f"outputs/frame_{saved_count:04d}.jpg", frame)
                 saved_count += 1
 

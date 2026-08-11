@@ -24,6 +24,23 @@ def angle_between(p1, vertex, p2) -> Optional[float]:
     return float(np.degrees(np.arccos(cos_a)))
 
 
+def shin_from_vertical_angle(knee, ankle) -> Optional[float]:
+    """
+    Ankle inversion proxy: angle of the shin vector (knee → ankle)
+    from downward vertical [0, 1].  A large lateral tilt suggests
+    inversion stress.  Returns degrees [0, 90].
+    """
+    if knee is None or ankle is None:
+        return None
+    shin = _vec(knee[:2], ankle[:2])
+    norm = np.linalg.norm(shin)
+    if norm == 0:
+        return None
+    vertical_down = np.array([0.0, 1.0], dtype=np.float32)
+    cos_a = np.clip(np.dot(shin / norm, vertical_down), -1.0, 1.0)
+    return float(np.degrees(np.arccos(cos_a)))
+
+
 def joint_velocity(kp_current: Dict, kp_previous: Dict, joint: str) -> Optional[float]:
     """Euclidean pixel displacement per frame for a joint."""
     if kp_current.get(joint) is None or kp_previous.get(joint) is None:
@@ -48,8 +65,9 @@ class PoseAnalyzer:
             "right_knee":   angle_between(kp.get("right_hip"),   kp.get("right_knee"),  kp.get("right_ankle")),
             "left_hip":     angle_between(kp.get("left_shoulder"), kp.get("left_hip"),  kp.get("left_knee")),
             "right_hip":    angle_between(kp.get("right_shoulder"), kp.get("right_hip"), kp.get("right_knee")),
-            "left_ankle":   angle_between(kp.get("left_knee"),   kp.get("left_ankle"),  None),  # ground proxy
-            "right_ankle":  angle_between(kp.get("right_knee"),  kp.get("right_ankle"), None),
+            # Ankle inversion proxy: shin-to-vertical tilt angle (no third point needed)
+            "left_ankle":   shin_from_vertical_angle(kp.get("left_knee"),   kp.get("left_ankle")),
+            "right_ankle":  shin_from_vertical_angle(kp.get("right_knee"),  kp.get("right_ankle")),
 
             # Upper body
             "left_elbow":   angle_between(kp.get("left_shoulder"),  kp.get("left_elbow"),  kp.get("left_wrist")),

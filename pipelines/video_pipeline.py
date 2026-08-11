@@ -1,4 +1,5 @@
 import cv2
+import csv
 import time
 import json
 import logging
@@ -51,7 +52,9 @@ class VideoInjuryPipeline:
 
         writer = None
         if output_path and self.cfg["output"]["save_video"]:
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            out_dir = os.path.dirname(output_path)
+            if out_dir:
+                os.makedirs(out_dir, exist_ok=True)
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             writer = cv2.VideoWriter(output_path, fourcc, fps_in, (width, height))
 
@@ -70,8 +73,12 @@ class VideoInjuryPipeline:
                 # --- Detect ---
                 persons = self.detector.detect(frame)
 
-                # --- Track ---
-                persons = self.tracker.update(persons)
+                # --- Track (returns persons, expired_ids) ---
+                persons, expired_ids = self.tracker.update(persons)
+
+                # Reset temporal state for tracks that just expired
+                for expired_id in expired_ids:
+                    self.temporal.reset_track(expired_id)
 
                 for person in persons:
                     tid = person.get("track_id", -1)
@@ -101,13 +108,15 @@ class VideoInjuryPipeline:
                     if events:
                         self.total_events += len(events)
                         for e in events:
+                            level, _ = self.classifier.get_risk_level(e.risk_score)
                             self.event_log.append({
-                                "frame": frame_idx,
-                                "track_id": tid,
-                                "type": e.injury_type,
-                                "label": e.label,
-                                "score": round(e.risk_score, 3),
-                                "details": e.details,
+                                "frame":      frame_idx,
+                                "track_id":   tid,
+                                "type":       e.injury_type,
+                                "label":      e.label,
+                                "risk_level": level,
+                                "score":      round(e.risk_score, 3),
+                                "details":    e.details,
                             })
                             logger.warning(str(e))
 
@@ -144,8 +153,20 @@ class VideoInjuryPipeline:
     def _save_report(self, output_path: Optional[str]):
         if not self.cfg["output"]["save_logs"] or not self.event_log:
             return
-        report_path = Path("outputs/logs/injury_report.json")
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(report_path, "w") as f:
+        report_dir = Path("outputs/logs")
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        # JSON
+        json_path = report_dir / "injury_report.json"
+        with open(json_path, "w") as f:
             json.dump(self.event_log, f, indent=2)
-        logger.info(f"Report saved: {report_path}")
+        logger.info(f"JSON report saved: {json_path}")
+
+        # CSV
+        csv_path = report_dir / "injury_report.csv"
+        fieldnames = ["frame", "track_id", "type", "label", "risk_level", "score", "details"]
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.event_log)
+        logger.info(f"CSV report saved: {csv_path}")

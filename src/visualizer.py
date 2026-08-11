@@ -82,7 +82,7 @@ class Visualizer:
         cv2.rectangle(overlay, (0, 0), (280, 75), (0, 0, 0), -1)
         cv2.addWeighted(overlay, 0.55, frame, 0.45, 0, frame)
 
-        cv2.putText(frame, "INJURY DETECTION SYSTEM", (8, 18),
+        cv2.putText(frame, "POSEGUARD", (8, 18),
                     self.font, 0.5, (0, 200, 255), 1, cv2.LINE_AA)
         cv2.putText(frame, f"Frame: {frame_idx:06d}  |  FPS: {fps:.1f}", (8, 38),
                     self.font, 0.45, (200, 200, 200), 1, cv2.LINE_AA)

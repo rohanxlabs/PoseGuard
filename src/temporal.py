@@ -61,3 +61,14 @@ class TemporalAnalyzer:
             self._last_event_frame[key] = frame_idx
             return True
         return False
+
+    def reset_track(self, track_id: int):
+        """
+        Clear all temporal state for a track that has expired.
+        Prevents stale history bleeding into a re-used track ID.
+        """
+        self._kp_history.pop(track_id, None)
+        # Remove debounce keys for this track
+        keys_to_remove = [k for k in self._last_event_frame if k.startswith(f"{track_id}_")]
+        for k in keys_to_remove:
+            del self._last_event_frame[k]
