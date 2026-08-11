@@ -89,6 +89,9 @@ PoseGuard demonstrates how computer vision can automate the detection of specifi
 └────────────────────────────────────────┘
 ```
 
+![Uploading Screenshot 2026-07-15 153101.png…]()
+
+
 ---
 
 ## ✨ Features
